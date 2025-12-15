@@ -10,12 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv ffmpeg curl \
  && rm -rf /var/lib/apt/lists/*
 
-COPY ../../entrypoints/whisper_actor.py /app/whisper_actor.py
+COPY entrypoints/whisper_actor.py /app/whisper_actor.py
+COPY images/whisper/requirements.txt /app/requirements.txt
+COPY images/whisper/entrypoint.sh /app/entrypoint.sh
 
 # Install Python deps and copy model code here.
-# Example:
-# COPY requirements.txt /app/requirements.txt
-# RUN python3 -m pip install --no-cache-dir -r requirements.txt
-# COPY whisper_pipeline/ /app/whisper_pipeline/
+RUN python3 -m pip install --no-cache-dir -r /app/requirements.txt
 
-ENTRYPOINT ["python3", "/app/whisper_actor.py"]
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tapis Actor entrypoint for Whisper transcription.
+Tapis Actor entrypoint for Whisper transcription using openai-whisper.
 
 Expected message (JSON):
 {
@@ -13,28 +13,39 @@ Output (JSON) is a manifest with transcript text and artifact locations.
 """
 
 import json
+import os
 import sys
 from typing import Any, Dict
 
+import whisper
+
 
 def run_whisper(payload: Dict[str, Any]) -> Dict[str, Any]:
-    # Placeholder: integrate with whisper-container invocation (e.g., `python run.py`).
     audio_path = payload.get("audio_path")
     language = payload.get("language")
-    model = payload.get("model", "base")
+    model_size = payload.get("model", "base")
+
+    if not audio_path or not os.path.exists(audio_path):
+        return {
+            "workflow": "whisper_transcription",
+            "status": "error",
+            "error": f"audio_path missing or not found: {audio_path}",
+        }
+
+    model = whisper.load_model(model_size)
+    result = model.transcribe(audio_path, language=language)
 
     return {
         "workflow": "whisper_transcription",
         "status": "completed",
-        "summary": "Stub manifest; replace with real Whisper transcript.",
-        "params": {"language": language, "model": model},
-        "transcript": "",
-        "segments": [],
-        "artifacts": [
-            # e.g., {"type": "text", "url": ".../transcript.txt"}
-        ],
+        "summary": "Whisper transcript",
+        "params": {"language": language, "model": model_size},
+        "transcript": result.get("text", ""),
+        "segments": result.get("segments", []),
+        "artifacts": [],
         "metadata": {
             "audio_path": audio_path,
+            "duration": result.get("duration"),
         },
     }
 
