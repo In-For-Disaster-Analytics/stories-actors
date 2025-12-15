@@ -19,6 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Lowercase owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -37,6 +40,6 @@ jobs:
         with:
           context: ./images/whisper
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/stories-whisper-actor:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/stories-whisper-actor:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/stories-whisper-actor:cache,mode=max
+          tags: ghcr.io/${{ env.OWNER_LC }}/stories-whisper-actor:latest
+          cache-from: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/stories-whisper-actor:cache
+          cache-to: type=registry,ref=ghcr.io/${{ env.OWNER_LC }}/stories-whisper-actor:cache,mode=max
