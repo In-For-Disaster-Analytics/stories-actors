@@ -2,7 +2,13 @@
 # Registers Stories UI workflow actors (multi-narrative, semantic-bridge, whisper) on the tacc.tapis.io tenant.
 # Uses the Tapis Actors v3 HTTP API directly so you only need curl and a scoped token.
 
-set -euo pipefail
+# Avoid nounset here because we do indirect expansion; we guard variables manually.
+set -eo pipefail
+
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Please run with bash (e.g., 'bash register-actors.sh whisper')." >&2
+  exit 1
+fi
 
 TAPIS_BASE_URL="${TAPIS_BASE_URL:-https://tacc.tapis.io}"
 ACTOR_PREFIX="${ACTOR_PREFIX:-stories}"
@@ -24,18 +30,6 @@ require_image() {
     exit 1
   fi
 }
-
-declare -A ACTOR_IMAGES=(
-  ["multi_narrative"]="MULTI_NARRATIVE_IMAGE"
-  ["semantic_bridge"]="SEMANTIC_BRIDGE_IMAGE"
-  ["whisper"]="WHISPER_IMAGE"
-)
-
-declare -A ACTOR_DESCRIPTIONS=(
-  ["multi_narrative"]="Stories UI - multi narrative analysis"
-  ["semantic_bridge"]="Stories UI - semantic bridge SVO mapping"
-  ["whisper"]="Stories UI - Whisper transcription"
-)
 
 create_actor() {
   local key="$1" name="$2" image="$3" description="$4"
@@ -78,21 +72,43 @@ EOF
 
 register_actor() {
   local key="$1"
-  local image_var="${ACTOR_IMAGES[$key]}"
-  local description="${ACTOR_DESCRIPTIONS[$key]}"
-  local image="${!image_var:-}"
+  local image_var=""
+  local description=""
+  local actor_key=""
+  local actor_name=""
 
+  case "$key" in
+    multi_narrative)
+      image_var="MULTI_NARRATIVE_IMAGE"
+      description="Stories UI - multi narrative analysis"
+      actor_key="multi_narrative"
+      actor_name="multi-narrative"
+      ;;
+    semantic_bridge)
+      image_var="SEMANTIC_BRIDGE_IMAGE"
+      description="Stories UI - semantic bridge SVO mapping"
+      actor_key="semantic_bridge"
+      actor_name="semantic-bridge"
+      ;;
+    whisper)
+      image_var="WHISPER_IMAGE"
+      description="Stories UI - Whisper transcription"
+      actor_key="whisper_transcribe"
+      actor_name="whisper"
+      ;;
+    *)
+      echo "Unknown actor key: ${key}. Valid keys: multi_narrative semantic_bridge whisper" >&2
+      exit 1
+      ;;
+  esac
+
+  local image="${!image_var:-}"
   if [[ -z "${image}" ]]; then
     echo "Missing image for ${key}. Set ${image_var}." >&2
     exit 1
   fi
 
-  case "$key" in
-    multi_narrative) create_actor "multi_narrative" "multi-narrative" "${image}" "${description}" ;;
-    semantic_bridge) create_actor "semantic_bridge" "semantic-bridge" "${image}" "${description}" ;;
-    whisper)         create_actor "whisper_transcribe" "whisper" "${image}" "${description}" ;;
-    *) echo "Unknown actor key: $key" >&2; exit 1 ;;
-  esac
+  create_actor "${actor_key}" "${actor_name}" "${image}" "${description}"
 }
 
 targets=("$@")

@@ -15,7 +15,10 @@ Output (JSON) is a manifest with transcript text and artifact locations.
 import json
 import os
 import sys
+import tempfile
 from typing import Any, Dict
+from urllib.parse import urlparse
+import urllib.request
 
 import whisper
 
@@ -25,7 +28,25 @@ def run_whisper(payload: Dict[str, Any]) -> Dict[str, Any]:
     language = payload.get("language")
     model_size = payload.get("model", "base")
 
+    temp_path = None
+    if audio_path and audio_path.startswith(("http://", "https://")):
+        try:
+            parsed = urlparse(audio_path)
+            suffix = os.path.splitext(parsed.path)[-1]
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            urllib.request.urlretrieve(audio_path, tmp.name)
+            temp_path = tmp.name
+            audio_path = temp_path
+        except Exception as e:
+            return {
+                "workflow": "whisper_transcription",
+                "status": "error",
+                "error": f"failed to download audio_url: {e}",
+            }
+
     if not audio_path or not os.path.exists(audio_path):
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
         return {
             "workflow": "whisper_transcription",
             "status": "error",
@@ -48,6 +69,9 @@ def run_whisper(payload: Dict[str, Any]) -> Dict[str, Any]:
             "duration": result.get("duration"),
         },
     }
+
+    if temp_path and os.path.exists(temp_path):
+        os.unlink(temp_path)
 
 
 def main() -> None:

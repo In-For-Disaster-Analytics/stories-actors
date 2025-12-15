@@ -4,7 +4,8 @@
 #   ./test-actors.sh            # test all known actors with sample payloads
 #   ./test-actors.sh whisper    # test only the whisper actor
 
-set -euo pipefail
+# Avoid nounset because we guard lookups manually.
+set -eo pipefail
 
 TAPIS_BASE_URL="${TAPIS_BASE_URL:-https://tacc.tapis.io}"
 
@@ -13,11 +14,15 @@ if [[ -z "${TAPIS_TOKEN:-}" ]]; then
   exit 1
 fi
 
-declare -A ACTOR_IDS=(
-  ["multi_narrative"]="${MULTI_NARRATIVE_ACTOR_ID:-}"
-  ["semantic_bridge"]="${SEMANTIC_BRIDGE_ACTOR_ID:-}"
-  ["whisper"]="${WHISPER_ACTOR_ID:-}"
-)
+actor_id_for() {
+  local key="$1"
+  case "$key" in
+    multi_narrative) echo "${MULTI_NARRATIVE_ACTOR_ID:-}" ;;
+    semantic_bridge) echo "${SEMANTIC_BRIDGE_ACTOR_ID:-}" ;;
+    whisper)         echo "${WHISPER_ACTOR_ID:-}" ;;
+    *) echo "" ;;
+  esac
+}
 
 sample_payload() {
   local key="$1"
@@ -77,7 +82,7 @@ if [[ ${#targets[@]} -eq 0 ]]; then
 fi
 
 for key in "${targets[@]}"; do
-  actor_id="${ACTOR_IDS[$key]}"
+  actor_id="$(actor_id_for "$key")"
   if [[ -z "${actor_id}" ]]; then
     echo "Missing actor ID for ${key}. Set ${key^^}_ACTOR_ID (e.g., MULTI_NARRATIVE_ACTOR_ID)." >&2
     exit 1
